@@ -1,0 +1,4 @@
+.headerbar-bg{
+    background-color: rgba(248,249,250, 0.85);
+    backdrop-filter: blur(3px);
+}
