@@ -1,14 +1,37 @@
-function cancelFlight(id){
-    console.log("Cancelling "+id);
-}
+import React from 'react';
+import {dfToDateAndTime, dfToDate, dfToTime} from '../utils/DateFormater.js';
+
+
 
 function FlightInfoRow(prop){
 
-    return <>
+    function cancelFlight(id){
+        fetch("http://127.0.0.1:9000/flights/"+id+"/cancel", {
+            method: "PATCH",
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem("access-token"),
+            }
+        })
+        .then((response) => {
+            return response.json();
+        })
+        .then( (data) => {
+            if(data['status'] == "SUCCESS"){
+                alert("Flight has been cancelled.");
+            }else{
+                alert(data['errors'][0]['message']);
+            }
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+
+        return <>
         <tr className="text-center">
             <td>{prop.row.flightNumber}</td> 
             <td>
-                {prop.row.departureDateTime}
+                {dfToDateAndTime(new Date(prop.row.departureDateTime))}
                 <button className="btn btn-sm btn-primary-outline"  data-bs-toggle="modal" data-bs-target="#departureDateTimeUpdateModel" onClick={()=>{localStorage.setItem("flightToEdit", prop.row.id)}}>
                     <i className="bi bi-pencil-square"></i>
                 </button>

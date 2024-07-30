@@ -1,5 +1,6 @@
 import React from "react";
 import FlightInfoRow from "./FlightInfoRow";
+import {dfToDateAndTime, dfToDate, dfToTime} from '../utils/DateFormater.js';
 
 class FlightInfo extends React.Component {
 
@@ -10,48 +11,65 @@ class FlightInfo extends React.Component {
             flightDepartureGate: null,
             flightDepartureDateTime: null,
             flightArrivalDateTime: null
-        }
+        };
+        this.rerenderParentCallback = this.rerenderParentCallback.bind(this);
     }
 
-    componentDidMount() {
+    rerenderParentCallback(){
+        this.getFlight();
+    }
+
+    getFlight(){
         fetch("http://127.0.0.1:9000/flights", {
             method: 'GET',
             headers: { 'Authorization': 'Bearer ' + localStorage.getItem("access-token") },
         })
-            .then((response) => {
+        .then((response) => {
                 return response.json();
+        })
+        .then((data) => {
+            console.log(data);
+            this.setState({
+                flights: data['data']
             })
-            .then((data) => {
-                console.log(data);
-                this.setState({
-                    flights: data['data']
-                })
-            }).catch((error) => {
-                console.log(error);
-            });
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+
+    componentDidMount() {
+        this.getFlight();
     }
 
     submitUpdateDepartureDateTimeForm(){
+
+        const departureDateTimeFormSubmitButton = document.getElementById("departureDateTimeFormSubmitButton");
+        departureDateTimeFormSubmitButton.disabled = true;
+        const oldContent = departureDateTimeFormSubmitButton.innerHTML;
+        departureDateTimeFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
+
         const updateDepartureGatePayload = {
-            departureGate: this.state.flightDepartureGate
+            departureDateTime: dfToDateAndTime(new Date(this.state.flightDepartureDateTime)),
+            arrivalDateTime: dfToDateAndTime(new Date(this.state.flightArrivalDateTime))
         }
 
-        const url = "http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/delay";
-        console.log(url);
-        fetch(url, {
+        fetch("http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/delay", {
             method: "PATCH",
-            headers: {'Content-Type': 'application/json'},
-            headers: {'Authorization': 'Bearer ' + localStorage.getItem("access-token") },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem("access-token"),
+            },
             body: JSON.stringify(updateDepartureGatePayload),
         })
         .then((response) => {
-            // submitButton.disabled = false;
-            // submitButton.innerHTML = oldContent;
+            departureDateTimeFormSubmitButton.disabled = false;
+            departureDateTimeFormSubmitButton.innerHTML = oldContent;
             return response.json();
         })
         .then( (data) => {
             if(data['status'] == "SUCCESS"){
-                console.log(data);
+                this.getFlight();
+                document.getElementById("departureDateTimeUpdateModelCloseButton").click();
             }else{
                 alert(data['errors'][0]['message']);
             }
@@ -61,31 +79,34 @@ class FlightInfo extends React.Component {
     }
 
     submitUpdateDepartureGateForm(){
-        // const submitButton = document.getElementById("formSubmitButton");
-        // submitButton.disabled = true;
-        // const oldContent = submitButton.innerHTML;
-        // submitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
+        const departureGateFormSubmitButton = document.getElementById("departureGateFormSubmitButton");
+        departureGateFormSubmitButton.disabled = true;
+        const oldContent = departureGateFormSubmitButton.innerHTML;
+        departureGateFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
 
         const updateDepartureGatePayload = {
             departureGate: this.state.flightDepartureGate
         }
 
-        const url = "http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/gate-change";
-        console.log(url);
-        fetch(url, {
+
+        fetch("http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/gate-change", {
             method: "PATCH",
-            headers: {'Content-Type': 'application/json'},
-            headers: {'Authorization': 'Bearer ' + localStorage.getItem("access-token") },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem("access-token")
+            },
             body: JSON.stringify(updateDepartureGatePayload),
         })
         .then((response) => {
-            // submitButton.disabled = false;
-            // submitButton.innerHTML = oldContent;
+            departureGateFormSubmitButton.disabled = false;
+            departureGateFormSubmitButton.innerHTML = oldContent;
             return response.json();
         })
         .then( (data) => {
+            console.log(data);
             if(data['status'] == "SUCCESS"){
-                console.log(data);
+                this.getFlight();
+                document.getElementById("departureGateUpdateModelCloseButton").click();
             }else{
                 alert(data['errors'][0]['message']);
             }
@@ -121,19 +142,19 @@ class FlightInfo extends React.Component {
                     <tbody>
                         {
                             flights.map(function (data, index) {
-                                return <FlightInfoRow key={index} row={data}/>
+                                return <FlightInfoRow key={index} row={data} />
                             })
                         }
                     </tbody>
                 </table>
             </div>
 
-            <div class="modal fade" id="departureDateTimeUpdateModel" tabindex="-1" aria-labelledby="departureGateUpdateModel" aria-hidden="true">
+            <div class="modal fade" id="departureDateTimeUpdateModel" tabindex="-1" aria-labelledby="departureDateTimeUpdateModel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h1 class="modal-title fs-5">Update Flight Departure Details</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureDateTimeUpdateModelCloseButton"></button>
                         </div>
                         <div class="modal-body">
                         <form onSubmit={(evt)=>{evt.preventDefault();}} id="loginForm">
@@ -157,8 +178,8 @@ class FlightInfo extends React.Component {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="exampleModalLabel">Update Flight Gate</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <h1 class="modal-title fs-5">Update Flight Gate</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureGateUpdateModelCloseButton"></button>
                         </div>
                         <div class="modal-body">
                         <form onSubmit={(evt)=>{evt.preventDefault();}} id="loginForm">
