@@ -66,7 +66,7 @@ class AddFlightForm extends React.Component {
             <>
                 <div className="container mx-auto mt-5 p-4 headerbar-bg rounded-4">
                     <h1 className="text-center display-5">Add New Flight</h1>
-                    <div class="messageBox bg-success mb-3 d-none text-center text-white p-2 rounded" id="bookingMessageBox"></div>
+                    <div className="messageBox bg-success mb-3 d-none text-center text-white p-2 rounded" id="bookingMessageBox"></div>
                     <form onSubmit={(evt) => { evt.preventDefault(); }} id="bookingForm">
                         
                         <div className="row">

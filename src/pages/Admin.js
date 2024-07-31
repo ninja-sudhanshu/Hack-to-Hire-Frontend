@@ -9,7 +9,7 @@ function Admin(){
                 <HeaderBarAdmin/>
                 <FlightInfo/>
                 <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
-                <AddFlightForm/>
+                {/* <AddFlightForm/> */}
                 <br/><br/><br/><br/><br/><br/>
             </div>
         </>

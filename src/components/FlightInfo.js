@@ -1,47 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import FlightInfoRow from "./FlightInfoRow";
-import {dfToDateAndTime, dfToDate, dfToTime} from '../utils/DateFormater.js';
+import {dfToDateAndTime} from '../utils/DateFormater.js';
 
-class FlightInfo extends React.Component {
+function FlightInfo() {
 
-    constructor() {
-        super();
-        this.state = {
-            flights: [],
-            flightDepartureGate: null,
-            flightDepartureDateTime: null,
-            flightArrivalDateTime: null
-        };
-        this.rerenderParentCallback = this.rerenderParentCallback.bind(this);
-    }
+    const [flights, setFlights] = useState([]); 
+    const [flightDepartureGate, setFlightDepartureGate] = useState(null);
+    const [flightDepartureDateTime, setFlightDepartureDateTime] = useState(null);
+    const [flightArrivalDateTime, setFlightArrivalDateTime] = useState(null);
 
-    rerenderParentCallback(){
-        this.getFlight();
-    }
-
-    getFlight(){
+    function getFlight(){
         fetch("http://127.0.0.1:9000/flights", {
             method: 'GET',
             headers: { 'Authorization': 'Bearer ' + localStorage.getItem("access-token") },
         })
         .then((response) => {
-                return response.json();
+            return response.json();
         })
         .then((data) => {
-            console.log(data);
-            this.setState({
-                flights: data['data']
-            })
+            setFlights(data['data']);
         }).catch((error) => {
             console.log(error);
         });
     }
 
-    componentDidMount() {
-        this.getFlight();
-    }
+    useEffect(() => {
+        getFlight();
+    }, []);
 
-    submitUpdateDepartureDateTimeForm(){
+    function submitUpdateDepartureDateTimeForm(){
 
         const departureDateTimeFormSubmitButton = document.getElementById("departureDateTimeFormSubmitButton");
         departureDateTimeFormSubmitButton.disabled = true;
@@ -49,27 +36,35 @@ class FlightInfo extends React.Component {
         departureDateTimeFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
 
         const updateDepartureGatePayload = {
-            departureDateTime: dfToDateAndTime(new Date(this.state.flightDepartureDateTime)),
-            arrivalDateTime: dfToDateAndTime(new Date(this.state.flightArrivalDateTime))
+            departureDateTime: dfToDateAndTime(new Date(flightDepartureDateTime)),
+            arrivalDateTime: dfToDateAndTime(new Date(flightArrivalDateTime))
         }
 
         fetch("http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/delay", {
-            method: "PATCH",
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + localStorage.getItem("access-token"),
             },
             body: JSON.stringify(updateDepartureGatePayload),
-        })
-        .then((response) => {
+        }).then((response) => {
             departureDateTimeFormSubmitButton.disabled = false;
             departureDateTimeFormSubmitButton.innerHTML = oldContent;
             return response.json();
-        })
-        .then( (data) => {
+        }).then((data) => {
             if(data['status'] == "SUCCESS"){
-                this.getFlight();
+                var flightCopy = flights.map((flight)=>{
+                    if(flight.id == data['data']['id']){
+                        flight.flightStatus = data['data']['flightStatus'];
+                        flight.departureDateTime = data['data']['departureDateTime'];
+                        return flight;
+                    }else{
+                        return flight;
+                    }
+                });
+                setFlights(flightCopy);
                 document.getElementById("departureDateTimeUpdateModelCloseButton").click();
+                document.getElementById("departureDateTimeUpdateForm").reset();
             }else{
                 alert(data['errors'][0]['message']);
             }
@@ -78,14 +73,14 @@ class FlightInfo extends React.Component {
         });
     }
 
-    submitUpdateDepartureGateForm(){
+    function submitUpdateDepartureGateForm(){
         const departureGateFormSubmitButton = document.getElementById("departureGateFormSubmitButton");
         departureGateFormSubmitButton.disabled = true;
         const oldContent = departureGateFormSubmitButton.innerHTML;
         departureGateFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
 
         const updateDepartureGatePayload = {
-            departureGate: this.state.flightDepartureGate
+            departureGate: flightDepartureGate
         }
 
 
@@ -103,9 +98,17 @@ class FlightInfo extends React.Component {
             return response.json();
         })
         .then( (data) => {
-            console.log(data);
             if(data['status'] == "SUCCESS"){
-                this.getFlight();
+                var flightCopy = flights.map((flight)=>{
+                    if(flight.id == data['data']['id']){
+                        flight.flightStatus = data['data']['flightStatus'];
+                        flight.departureGate = data['data']['departureGate'];
+                        return flight;
+                    }else{
+                        return flight;
+                    }
+                });
+                setFlights(flightCopy);
                 document.getElementById("departureGateUpdateModelCloseButton").click();
             }else{
                 alert(data['errors'][0]['message']);
@@ -115,11 +118,9 @@ class FlightInfo extends React.Component {
         });
     }
 
-    render() {
 
-        const { flights } = this.state;
-
-        return <>
+        return (
+        <>
             <div className="container mx-auto headerbar-bg mt-5 p-4 rounded-4">
 
                 <div className="pb-5">
@@ -149,24 +150,24 @@ class FlightInfo extends React.Component {
                 </table>
             </div>
 
-            <div class="modal fade" id="departureDateTimeUpdateModel" tabindex="-1" aria-labelledby="departureDateTimeUpdateModel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title fs-5">Update Flight Departure Details</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureDateTimeUpdateModelCloseButton"></button>
+            <div className="modal fade" id="departureDateTimeUpdateModel" tabIndex="-1" aria-labelledby="departureDateTimeUpdateModel" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5">Update Flight Departure Details</h1>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureDateTimeUpdateModelCloseButton"></button>
                         </div>
-                        <div class="modal-body">
-                        <form onSubmit={(evt)=>{evt.preventDefault();}} id="loginForm">
+                        <div className="modal-body">
+                        <form onSubmit={(evt)=>{evt.preventDefault();}} id="departureDateTimeUpdateForm">
                                 <div className="mb-3">
                                     <label className="form-label">New Departure Time</label>
-                                    <input type="datetime-local" className="form-control py-2" onChange={(e)=>{this.setState({flightDepartureDateTime:e.target.value})}}/>
+                                    <input type="datetime-local" className="form-control py-2" onChange={(e)=>{ setFlightDepartureDateTime(e.target.value); }} />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">New Arrival Time</label>
-                                    <input type="datetime-local" className="form-control py-2" onChange={(e)=>{this.setState({flightArrivalDateTime:e.target.value})}}/>
+                                    <input type="datetime-local" className="form-control py-2" onChange={(e)=>{ setFlightArrivalDateTime(e.target.value); }} />
                                 </div>
-                                <button type="submit" className="btn btn-dark w-100 py-3" id="departureDateTimeFormSubmitButton" onClick={()=>{this.submitUpdateDepartureDateTimeForm()}} >Update Gate</button>
+                                <button type="submit" className="btn btn-dark w-100 py-3" id="departureDateTimeFormSubmitButton" onClick={()=>{submitUpdateDepartureDateTimeForm()}} >Reschedule Flight</button>
                             </form>
                         </div>
                     </div>
@@ -174,27 +175,27 @@ class FlightInfo extends React.Component {
             </div>
 
 
-            <div class="modal fade" id="departureGateUpdateModel" tabindex="-1" aria-labelledby="departureGateUpdateModel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title fs-5">Update Flight Gate</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureGateUpdateModelCloseButton"></button>
+            <div className="modal fade" id="departureGateUpdateModel" tabIndex="-1" aria-labelledby="departureGateUpdateModel" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5">Update Flight Gate</h1>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" id="departureGateUpdateModelCloseButton"></button>
                         </div>
-                        <div class="modal-body">
+                        <div className="modal-body">
                         <form onSubmit={(evt)=>{evt.preventDefault();}} id="loginForm">
                                 <div className="mb-3">
                                     <label className="form-label">New Gate</label>
-                                    <input type="text" className="form-control py-2" onChange={(e)=>{this.setState({flightDepartureGate:e.target.value})}}/>
+                                    <input type="text" className="form-control py-2" onChange={(e)=>{ setFlightDepartureGate(e.target.value); }}/>
                                 </div>
-                                <button type="submit" className="btn btn-dark w-100 py-3" id="departureGateFormSubmitButton" onClick={()=>{this.submitUpdateDepartureGateForm()}} >Update Gate</button>
+                                <button type="submit" className="btn btn-dark w-100 py-3" id="departureGateFormSubmitButton" onClick={()=>{submitUpdateDepartureGateForm()}} >Update Gate</button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
         </>
-    }
+    );
 
 }
 
