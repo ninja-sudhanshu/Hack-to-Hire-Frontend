@@ -8,6 +8,13 @@ function FlightInfo() {
     const [flightDepartureGate, setFlightDepartureGate] = useState(null);
     const [flightDepartureDateTime, setFlightDepartureDateTime] = useState(null);
     const [flightArrivalDateTime, setFlightArrivalDateTime] = useState(null);
+    const [flightUpdateCustomMessage, setFlightUpdateCustomMessage] = useState(0);
+    const [flightToUpdate, setFlightToUpdate] = useState(0);
+
+    function getFlightToUpdate(flightId){
+        setFlightToUpdate(flightId);
+        console.log("Flight ID is "+flightId);
+    }
 
     function getFlight(){
         fetch("http://127.0.0.1:9000/flights", {
@@ -37,10 +44,11 @@ function FlightInfo() {
 
         const updateDepartureGatePayload = {
             departureDateTime: dfToDateAndTime(new Date(flightDepartureDateTime)),
-            arrivalDateTime: dfToDateAndTime(new Date(flightArrivalDateTime))
+            arrivalDateTime: dfToDateAndTime(new Date(flightArrivalDateTime)),
+            message: flightUpdateCustomMessage
         }
 
-        fetch("http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/delay", {
+        fetch("http://127.0.0.1:9000/flights/"+flightToUpdate+"/delay", {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -80,11 +88,12 @@ function FlightInfo() {
         departureGateFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
 
         const updateDepartureGatePayload = {
-            departureGate: flightDepartureGate
+            departureGate: flightDepartureGate,
+            message: flightUpdateCustomMessage
         }
 
 
-        fetch("http://127.0.0.1:9000/flights/"+localStorage.getItem('flightToEdit')+"/gate-change", {
+        fetch("http://127.0.0.1:9000/flights/"+flightToUpdate+"/gate-change", {
             method: "PATCH",
             headers: {
                 'Content-Type': 'application/json',
@@ -119,6 +128,61 @@ function FlightInfo() {
     }
 
 
+
+
+
+
+    function submitCancelFlightForm(){
+        const cancelFlightFormSubmitButton = document.getElementById("cancelFlightFormSubmitButton");
+        cancelFlightFormSubmitButton.disabled = true;
+        const oldContent = cancelFlightFormSubmitButton.innerHTML;
+        cancelFlightFormSubmitButton.innerHTML = '<span class="spinner-border text-white spinner-border-sm"></span>';
+
+        const cancelFlightPayload = {
+            message: flightUpdateCustomMessage
+        }
+
+
+        fetch("http://127.0.0.1:9000/flights/"+flightToUpdate+"/cancel", {
+            method: "PATCH",
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem("access-token")
+            },
+            body: JSON.stringify(cancelFlightPayload),
+        })
+        .then((response) => {
+            cancelFlightFormSubmitButton.disabled = false;
+            cancelFlightFormSubmitButton.innerHTML = oldContent;
+            return response.json();
+        })
+        .then( (data) => {
+            if(data['status'] == "SUCCESS"){
+                var flightCopy = flights.map((flight)=>{
+                    if(flight.id == data['data']['id']){
+                        flight.flightStatus = data['data']['flightStatus'];
+                        return flight;
+                    }else{
+                        return flight;
+                    }
+                });
+                setFlights(flightCopy);
+                document.getElementById("cancelFlightModelCloseButton").click();
+            }else{
+                alert(data['errors'][0]['message']);
+            }
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+
+
+
+
+
+    
+
+
         return (
         <>
             <div className="container mx-auto headerbar-bg mt-5 p-4 rounded-4">
@@ -143,7 +207,7 @@ function FlightInfo() {
                     <tbody>
                         {
                             flights.map(function (data, index) {
-                                return <FlightInfoRow key={index} row={data} />
+                                return <FlightInfoRow key={index} data={data} flightToUpdate={getFlightToUpdate} />
                             })
                         }
                     </tbody>
@@ -167,6 +231,11 @@ function FlightInfo() {
                                     <label className="form-label">New Arrival Time</label>
                                     <input type="datetime-local" className="form-control py-2" onChange={(e)=>{ setFlightArrivalDateTime(e.target.value); }} />
                                 </div>
+                                <div className="mb-3">
+                                    <label className="form-label pb-2">Please enter additional message for passangers.</label>
+                                    <textarea className="form-control py-2"  onChange={(e)=>{ setFlightUpdateCustomMessage(e.target.value); }} >
+                                    </textarea>
+                                </div>
                                 <button type="submit" className="btn btn-dark w-100 py-3" id="departureDateTimeFormSubmitButton" onClick={()=>{submitUpdateDepartureDateTimeForm()}} >Reschedule Flight</button>
                             </form>
                         </div>
@@ -188,12 +257,43 @@ function FlightInfo() {
                                     <label className="form-label">New Gate</label>
                                     <input type="text" className="form-control py-2" onChange={(e)=>{ setFlightDepartureGate(e.target.value); }}/>
                                 </div>
+                                <div className="mb-3">
+                                    <label className="form-label pb-2">Please enter additional message for passangers.</label>
+                                    <textarea className="form-control py-2"  onChange={(e)=>{ setFlightUpdateCustomMessage(e.target.value); }} >
+                                    </textarea>
+                                </div>
                                 <button type="submit" className="btn btn-dark w-100 py-3" id="departureGateFormSubmitButton" onClick={()=>{submitUpdateDepartureGateForm()}} >Update Gate</button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
+
+
+
+            
+            <div className="modal fade" id="cancelFlightModel" tabIndex="-1" aria-labelledby="cancelFlightModel" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5">Cancel Flight</h1>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" id="cancelFlightModelCloseButton"></button>
+                        </div>
+                        <div className="modal-body">
+                        <form onSubmit={(evt)=>{evt.preventDefault();}} id="cancelFlightForm">
+                                <div className="mb-3">
+                                    <label className="form-label pb-3">Please enter additional message for passangers.</label>
+                                    <textarea className="form-control py-2"  onChange={(e)=>{ setFlightUpdateCustomMessage(e.target.value); }} >
+                                    </textarea>
+                                </div>
+                                <button type="submit" className="btn btn-dark w-100 py-3" id="cancelFlightFormSubmitButton" onClick={()=>{submitCancelFlightForm()}} >Cancel Flight</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
         </>
     );
 
